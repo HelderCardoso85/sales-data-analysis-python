@@ -1,0 +1,6 @@
+id,produto,categoria,quantidade,preco_unitario,data_venda,faturamento_total
+1,Notebook,Eletrônicos,2,3500.0,2026-08-01,7000.0
+2,Mouse,Acessórios,5,80.0,2026-08-01,400.0
+3,Teclado,Acessórios,3,150.0,2026-08-02,450.0
+4,Monitor,Eletrônicos,1,1200.0,2026-08-02,1200.0
+5,Cadeira Gamer,Móveis,1,900.0,2026-08-03,900.0
