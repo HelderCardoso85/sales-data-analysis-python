@@ -1,55 +1,45 @@
-import os
+import streamlit as st
 import pandas as pd
-import mysql.connector
-from mysql.connector import Error
 
-# Configurações de Conexão com o MySQL local
-# Dica de segurança: utilize variáveis de ambiente ou ajuste as credenciais locais
-DB_HOST = os.getenv("DB_HOST", "localhost")
-DB_USER = os.getenv("DB_USER", "root")
-DB_PASS = os.getenv("DB_PASS", "SUA_SENHA_AQUI")  # Não expor senhas reais no GitHub
-DB_NAME = os.getenv("DB_NAME", "projeto_vendas")
+# Configuração da página do Streamlit
+st.set_page_config(page_title="Análise de Vendas", page_icon="📊", layout="wide")
 
-def carregar_dados_e_analisar():
-    try:
-        # Estabelece a conexão com o banco de dados
-        conexao = mysql.connector.connect(
-            host=DB_HOST,
-            user=DB_USER,
-            password=DB_PASS,
-            database=DB_NAME
-        )
+st.title("📊 Painel de Análise de Vendas")
+st.write("Este painel apresenta a análise exploratória e métricas de desempenho de vendas.")
 
-        if conexao.is_connected():
-            print("[INFO] Conexão com o MySQL estabelecida com sucesso.")
+# Função para carregar os dados do CSV com cache para otimizar
+@st.cache_data
+def carregar_dados():
+    # Lê o ficheiro CSV que está na mesma pasta
+    df = pd.read_csv("relatorio_vendas_final.csv")
+    return df
 
-            # Leitura dos dados via SQL
-            query = "SELECT * FROM vendas;"
-            df = pd.read_sql(query, conexao)
+# Bloco principal de execução
+try:
+    df = carregar_dados()
+    
+    st.success("✅ Dados carregados com sucesso a partir do ficheiro CSV!")
 
-            # Processamento e Engenharia de Recursos
-            df['faturamento_total'] = df['quantidade'] * df['preco_unitario']
+    # Métricas principais no topo (KPIs)
+    total_vendas = len(df)
+    faturamento_total = df['faturamento_total'].sum() if 'faturamento_total' in df.columns else 0
+    
+    col1, col2 = st.columns(2)
+    col1.metric("Total de Registos", f"{total_vendas:,}")
+    col2.metric("Faturamento Total", f"€ {faturamento_total:,.2f}")
 
-            print("\n--- Amostra dos Dados Importados ---")
-            print(df[['produto', 'categoria', 'quantidade', 'faturamento_total']].head())
+    st.markdown("---")
+    
+    # Secção para mostrar a tabela de dados
+    st.subheader("📋 Amostra dos Dados")
+    st.dataframe(df.head(10), use_container_width=True)
 
-            print("\n--- Faturamento Total por Categoria ---")
-            resumo_categoria = df.groupby('categoria')['faturamento_total'].sum().reset_index()
-            print(resumo_categoria.to_string(index=False))
+    # Gráfico simples de faturamento por categoria (se a coluna existir)
+    if 'categoria' in df.columns and 'faturamento_total' in df.columns:
+        st.markdown("---")
+        st.subheader("📈 Faturamento por Categoria")
+        resumo_categoria = df.groupby('categoria')['faturamento_total'].sum().reset_index()
+        st.bar_chart(resumo_categoria.set_index('categoria'))
 
-            # Exportação do relatório final
-            nome_arquivo = "relatorio_vendas_final.csv"
-            df.to_csv(nome_arquivo, index=False)
-            print(f"\n[OK] Relatório '{nome_arquivo}' gerado com sucesso!")
-
-    except Error as e:
-        print(f"[ERRO] Falha ao conectar ou processar no MySQL: {e}")
-
-    finally:
-        # Garante o fechamento da conexão com o banco de dados
-        if 'conexao' in locals() and conexao.is_connected():
-            conexao.close()
-            print("[INFO] Conexão com o MySQL encerrada.")
-
-if __name__ == "__main__":
-    carregar_dados_e_analisar()
+except Exception as e:
+    st.error(f"❌ Erro ao carregar os dados: {e}")
